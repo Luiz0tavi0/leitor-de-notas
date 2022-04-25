@@ -17,6 +17,7 @@ class BuilderReaderBase:
         self.build_resumo_financeiro()
         self.build_info()
         self.irrf_retido_fonte()
+        self.apropriacao_de_custos()
         return self.parsed_data
 
     def build_negociacoes(self):
@@ -41,3 +42,6 @@ class BuilderReaderBase:
         if total_cblc + total_bolsa + total_operacional != total_nota:
             irrf_retido = True
         self.parsed_data['irrf_retido_fonte'] = irrf_retido
+
+    def apropriacao_de_custos(self):
+        pass

@@ -12,6 +12,8 @@ class Negocio(BaseModel):
     qtd: int
     preco: int
     valor_operacao: int
+    preco_ajustado: int
+    valor_operacao_ajustado: int
 
 
 class ResumoNegocio(BaseModel):
@@ -46,13 +48,14 @@ class CustosOperacionais(BaseModel):
     impostos: int
     irrf: int
     outros: int
-    # total_custos_despesas: int
+    total_custos_despesas: int
 
 
 class ResumoFinanceiro(BaseModel):
     clearing: Clearing
     bolsa: Bolsa
     custos_operacionais: CustosOperacionais
+    custo_da_nota: int
 
 
 class NotaDeCorretagem(BaseModel):
@@ -63,3 +66,7 @@ class NotaDeCorretagem(BaseModel):
     data_pregao: datetime
     total: int
     irrf_retido_fonte: bool
+
+
+class NotasDeCorretagem(BaseModel):
+    notas: List[NotaDeCorretagem]

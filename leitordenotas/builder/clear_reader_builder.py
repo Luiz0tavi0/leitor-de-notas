@@ -1,6 +1,5 @@
 import re
 from datetime import datetime
-
 from leitordenotas.builder.builder_reader_base import BuilderReaderBase
 
 
@@ -65,6 +64,7 @@ class ClearReaderBuilder(BuilderReaderBase):
                 'total_custos_despesas': self.parse_real(extracted[7][0], dc=extracted[7][2])
             }
         }
+
         self.parsed_data['total'] = self.parse_real(extracted[0][0], dc=extracted[0][2])
 
     def build_info(self):
@@ -72,3 +72,35 @@ class ClearReaderBuilder(BuilderReaderBase):
         self.parsed_data['numero'] = numero
         data_pregao = re.search(self.DATA_NOTA_PATTERN, self.raw_text).group(2)
         self.parsed_data['data_pregao'] = datetime.strptime(data_pregao, "%d/%m/%Y")
+
+    def apropriacao_de_custos(self):
+        custos_operacionais = self.parsed_data['resumo_financeiro']['custos_operacionais']['total_custos_despesas']
+
+        custos_clearing = self.parsed_data['resumo_financeiro']['clearing']['taxa_registro'] + \
+                          self.parsed_data['resumo_financeiro']['clearing']['taxa_liquidacao']
+        custos_bolsa = sum(self.parsed_data['resumo_financeiro']['bolsa'].values())
+
+        self.parsed_data['resumo_financeiro']['custo_da_nota'] = \
+            (custos_clearing + custos_bolsa + custos_operacionais) - \
+            self.parsed_data['resumo_financeiro']['custos_operacionais']['irrf']
+        custo_a_apropriar = self.parsed_data['resumo_financeiro']['custo_da_nota']
+        fracao_ideal_ = self.parsed_data['resumo_financeiro']['custo_da_nota'] / self.parsed_data['resumo_negocios'][
+            'valor_operacoes']
+        self.parsed_data['negocios'].sort(key=lambda n: abs(n['valor_operacao']), reverse=True)
+        print(f'Custo a apropriar da nota {self.parsed_data["numero"]} -> {custo_a_apropriar}')
+        for negocio in self.parsed_data['negocios']:
+            ajuste = abs(round(negocio['valor_operacao'] * fracao_ideal_))
+            novo_preco = negocio['preco'] - ajuste
+            custo_a_apropriar += ajuste
+            negocio.update({'preco_ajustado': novo_preco})
+            novo_valor_operacao = negocio['valor_operacao'] - ajuste
+            negocio.update({'valor_operacao_ajustado': novo_valor_operacao})
+
+        if custo_a_apropriar > 0:
+            novo_preco = self.parsed_data['negocios'][-1]['preco'] - abs(custo_a_apropriar)
+            novo_valor_operacao = self.parsed_data['negocios'][-1]['valor_operacao'] - abs(custo_a_apropriar)
+            self.parsed_data['negocios'][-1].update(
+                {'preco_ajustado': novo_preco,
+                 'valor_operacao_ajustado': novo_valor_operacao}
+            )
+
